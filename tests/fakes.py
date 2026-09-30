@@ -4,6 +4,7 @@ import math
 import re
 import zlib
 from collections.abc import Sequence
+from typing import NamedTuple
 
 WORD_PATTERN = re.compile(r"[a-z0-9]+")
 
@@ -29,13 +30,18 @@ def normalize_to_unit_length(vector: list[float]) -> list[float]:
     return [value / norm for value in vector] if norm else vector
 
 
+class RecordedPrompt(NamedTuple):
+    system: str
+    user: str
+
+
 class FakeLLM:
-    """Records every prompt it receives and always returns the same canned answer."""
+    """Records every (system, user) prompt pair and always returns the same canned answer."""
 
     def __init__(self, answer: str = "Canned answer [1].") -> None:
         self.answer = answer
-        self.prompts: list[str] = []
+        self.prompts: list[RecordedPrompt] = []
 
-    def complete(self, prompt: str) -> str:
-        self.prompts.append(prompt)
+    def complete(self, system: str, user: str) -> str:
+        self.prompts.append(RecordedPrompt(system, user))
         return self.answer

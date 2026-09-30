@@ -22,9 +22,17 @@ class Embedder(Protocol):
 
 
 class VectorStore(Protocol):
+    """Collection-scoped vector repository.
+
+    add() upserts: a chunk whose (source, index) already exists in the collection replaces it.
+    add() raises ValueError when len(chunks) != len(vectors).
+    """
+
     def add(self, collection: str, chunks: Sequence[Chunk], vectors: list[list[float]]) -> None: ...
 
-    def search(self, collection: str, query: list[float], top_k: int) -> list[ScoredChunk]: ...
+    def search(
+        self, collection: str, query_vector: list[float], top_k: int
+    ) -> list[ScoredChunk]: ...
 
     def has_collection(self, collection: str) -> bool: ...
 
@@ -32,4 +40,4 @@ class VectorStore(Protocol):
 
 
 class LLM(Protocol):
-    def complete(self, prompt: str) -> str: ...
+    def complete(self, system: str, user: str) -> str: ...

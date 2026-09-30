@@ -1,6 +1,6 @@
 """Tests proving the test fakes are deterministic."""
 
-from tests.fakes import FakeEmbedder, FakeLLM
+from tests.fakes import FakeEmbedder, FakeLLM, RecordedPrompt
 
 
 def test_fake_embedder_returns_same_vector_for_same_text() -> None:
@@ -25,11 +25,11 @@ def test_fake_embedder_vectors_have_configured_dimension() -> None:
 
 def test_fake_llm_returns_canned_answer() -> None:
     llm = FakeLLM(answer="24 days [1].")
-    assert llm.complete("any prompt") == "24 days [1]."
+    assert llm.complete("system rules", "user question") == "24 days [1]."
 
 
-def test_fake_llm_records_every_prompt_in_order() -> None:
+def test_fake_llm_records_system_and_user_prompts_in_order() -> None:
     llm = FakeLLM()
-    llm.complete("first")
-    llm.complete("second")
-    assert llm.prompts == ["first", "second"]
+    llm.complete("rules", "first")
+    llm.complete("rules", "second")
+    assert llm.prompts == [RecordedPrompt("rules", "first"), RecordedPrompt("rules", "second")]
