@@ -56,7 +56,8 @@ def test_api_ask_returns_answer_with_citations_from_uploaded_file(client: TestCl
     assert (body["answer"], body["grounded"], body["truncated"]) == (
         "Employees get 24 days [1].", True, False
     )
-    assert [(c["source"], c["chunk_index"]) for c in body["citations"]] == [("leave.md", 0)]
+    citations = [(c["reference"], c["source"], c["chunk_index"]) for c in body["citations"]]
+    assert citations == [(1, "leave.md", 0)]
     assert isinstance(body["citations"][0]["score"], float)
 
 

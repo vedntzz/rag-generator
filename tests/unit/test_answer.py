@@ -19,6 +19,9 @@ class StubStore:
         self.hits = hits
         self.searches: list[tuple[str, int]] = []
 
+    def has_collection(self, collection: str) -> bool:
+        return True
+
     def search(self, collection: str, query_vector: list[float], top_k: int) -> list[ScoredChunk]:
         self.searches.append((collection, top_k))
         return self.hits[:top_k]
@@ -73,13 +76,13 @@ def test_answer_is_ungrounded_not_found_when_reply_empty_or_not_found(reply: str
 
 def test_answer_cites_only_chunks_referenced_in_reply() -> None:
     answer = ask(THREE_HITS, FakeLLM("24 days [1]; carry-over [3]."))
-    assert answer.citations == [Citation("a.md", 0, 0.9), Citation("c.md", 0, 0.7)]
+    assert answer.citations == [Citation("a.md", 0, 0.9, 1), Citation("c.md", 0, 0.7, 3)]
     assert answer.grounded is True
 
 
-def test_answer_citation_carries_chunk_index_and_score() -> None:
+def test_answer_citation_carries_chunk_index_score_and_reference() -> None:
     answer = ask(THREE_HITS, FakeLLM("Sick leave [2]."))
-    assert answer.citations == [Citation(source="b.md", chunk_index=2, score=0.8)]
+    assert answer.citations == [Citation(source="b.md", chunk_index=2, score=0.8, reference=2)]
 
 
 def test_answer_cites_repeated_reference_once() -> None:
@@ -113,7 +116,19 @@ def test_answer_is_not_truncated_for_complete_reply() -> None:
     assert ask(THREE_HITS, FakeLLM("24 days [1].")).truncated is False
 
 
-def test_answer_raises_for_missing_collection(tmp_path: Path) -> None:
-    service = AnswerService(FakeEmbedder(), NumpyVectorStore(tmp_path), FakeLLM(), 5, 0.3)
+class CountingEmbedder(FakeEmbedder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls = 0
+
+    def embed_query(self, text: str) -> list[float]:
+        self.calls += 1
+        return super().embed_query(text)
+
+
+def test_answer_raises_for_missing_collection_without_embedding(tmp_path: Path) -> None:
+    embedder = CountingEmbedder()
+    service = AnswerService(embedder, NumpyVectorStore(tmp_path), FakeLLM(), 5, 0.3)
     with pytest.raises(CollectionNotFoundError):
         service.ask("hr", "q")
+    assert embedder.calls == 0

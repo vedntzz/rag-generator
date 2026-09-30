@@ -54,7 +54,19 @@ def test_cli_ask_prints_answer_and_citations(service: RagService, docs: Path) ->
     result = run("ask", "--collection", "hr", QUESTION)
     assert result.exit_code == 0
     assert "Employees get 24 days [1]." in result.stdout
-    assert "- leave.md (chunk 0, score " in result.stdout
+    assert "[1] leave.md (chunk 0, score " in result.stdout
+
+
+def test_cli_ask_labels_citations_with_reply_reference_numbers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, docs: Path
+) -> None:
+    (docs / "leave2.md").write_text("Employees get 24 days of annual leave, rising to 30.")
+    settings = Settings(_env_file=None, data_dir=tmp_path / "data")  # type: ignore[call-arg]
+    service = build_rag_service(settings, FakeEmbedder(), FakeLLM("Rises to 30 [2]."))
+    monkeypatch.setattr(cli, "get_rag_service", lambda: service)
+    service.ingest("hr", [docs])
+    lines = run("ask", "--collection", "hr", QUESTION).stdout.splitlines()
+    assert [line.split(" ")[0] for line in lines if line.startswith("[")] == ["[2]"]
 
 
 def test_cli_ask_exits_zero_when_answer_not_grounded(service: RagService, docs: Path) -> None:
