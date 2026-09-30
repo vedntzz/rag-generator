@@ -2,7 +2,6 @@
 
 import json
 import os
-import re
 from collections.abc import Callable, Sequence
 from dataclasses import asdict
 from pathlib import Path
@@ -10,11 +9,15 @@ from typing import BinaryIO
 
 import numpy as np
 
-from rag_generator.domain import Chunk, ScoredChunk
-from rag_generator.errors import CollectionNotFoundError, InvalidCollectionNameError
+from rag_generator.domain import (
+    Chunk,
+    ScoredChunk,
+    is_valid_collection_name,
+    validate_collection_name,
+)
+from rag_generator.errors import CollectionNotFoundError
 
 COLLECTION_FILE = "collection.npz"
-COLLECTION_NAME_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 Matrix = np.ndarray
 
 
@@ -54,13 +57,8 @@ class NumpyVectorStore:
 
     def _collection_path(self, collection: str) -> Path:
         # Validating here keeps every public method from touching paths outside data_dir.
-        if not is_valid_collection_name(collection):
-            raise InvalidCollectionNameError(collection)
+        validate_collection_name(collection)
         return self.data_dir / collection / COLLECTION_FILE
-
-
-def is_valid_collection_name(name: str) -> bool:
-    return COLLECTION_NAME_PATTERN.fullmatch(name) is not None
 
 
 def load_collection(path: Path) -> tuple[list[Chunk], Matrix]:

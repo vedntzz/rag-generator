@@ -6,6 +6,7 @@ from fastembed import TextEmbedding
 from rag_generator.chunking.recursive_chunker import RecursiveCharacterChunker
 from rag_generator.config import Settings
 from rag_generator.embedding.fastembed_embedder import FastEmbedEmbedder
+from rag_generator.embedding.lazy_embedder import LazyEmbedder
 from rag_generator.llm.anthropic_llm import AnthropicLLM
 from rag_generator.loaders.docx_loader import DocxLoader
 from rag_generator.loaders.pdf_loader import PdfLoader
@@ -22,7 +23,7 @@ def build_rag_service(
     settings: Settings, embedder: Embedder | None = None, llm: LLM | None = None
 ) -> RagService:
     """Wire every adapter; embedder/llm overrides let tests inject fakes (no download, no API)."""
-    embedder = build_default_embedder(settings) if embedder is None else embedder
+    embedder = build_lazy_default_embedder(settings) if embedder is None else embedder
     llm = build_default_llm(settings) if llm is None else llm
     store = NumpyVectorStore(settings.data_dir)
     chunker = RecursiveCharacterChunker(settings.chunk_size, settings.chunk_overlap)
@@ -38,6 +39,11 @@ def build_loader_registry() -> LoaderRegistry:
     registry.register(".pdf", PdfLoader())
     registry.register(".docx", DocxLoader())
     return registry
+
+
+def build_lazy_default_embedder(settings: Settings) -> LazyEmbedder:
+    # Model download/loading waits for the first embed call, so `rag list` stays cheap.
+    return LazyEmbedder(lambda: build_default_embedder(settings))
 
 
 def build_default_embedder(settings: Settings) -> FastEmbedEmbedder:
