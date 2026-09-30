@@ -54,7 +54,7 @@ def test_cli_ask_prints_answer_and_citations(service: RagService, docs: Path) ->
     result = run("ask", "--collection", "hr", QUESTION)
     assert result.exit_code == 0
     assert "Employees get 24 days [1]." in result.stdout
-    assert "[1] leave.md (chunk 0, score " in result.stdout
+    assert "- leave.md (chunk 0, score " in result.stdout
 
 
 def test_cli_ask_exits_zero_when_answer_not_grounded(service: RagService, docs: Path) -> None:

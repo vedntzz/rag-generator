@@ -108,3 +108,33 @@ def test_api_upload_stores_file_name_only_as_source(client: TestClient) -> None:
     client.post("/collections/hr/documents", files=[sneaky])
     citations = client.post("/collections/hr/ask", json=QUESTION).json()["citations"]
     assert [c["source"] for c in citations] == ["leave.md"]
+
+
+def record_ingested_paths(service: RagService) -> list[Path]:
+    recorded: list[Path] = []
+    original_ingest = service.ingest
+
+    def recording_ingest(collection: str, paths: list[Path]) -> int:
+        recorded.extend(paths)
+        assert all(path.is_file() for path in paths)
+        return original_ingest(collection, paths)
+
+    service.ingest = recording_ingest  # type: ignore[method-assign]
+    return recorded
+
+
+def test_api_upload_removes_temporary_directory_after_ingest(tmp_path: Path) -> None:
+    service = service_with(tmp_path, FakeLLM())
+    recorded = record_ingested_paths(service)
+    for test_client in client_for(service):
+        test_client.post("/collections/hr/documents", files=[LEAVE_FILE])
+    assert recorded and not any(path.parent.exists() for path in recorded)
+
+
+def test_api_upload_removes_temporary_directory_when_ingest_fails(tmp_path: Path) -> None:
+    service = service_with(tmp_path, FakeLLM())
+    recorded = record_ingested_paths(service)
+    bad = ("files", ("budget.xlsx", b"x", "application/octet-stream"))
+    for test_client in client_for(service):
+        assert test_client.post("/collections/hr/documents", files=[bad]).status_code == 400
+    assert recorded and not any(path.parent.exists() for path in recorded)
