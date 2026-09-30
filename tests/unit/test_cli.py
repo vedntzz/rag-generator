@@ -127,3 +127,40 @@ def test_cli_list_with_real_container_never_constructs_text_embedding(
     monkeypatch.setenv("RAG_DATA_DIR", str(tmp_path / "data"))
     result = run("list")
     assert result.exit_code == 0, result.output
+
+
+class BrokenService:
+    """Every call fails with an error the CLI does not specifically know about."""
+
+    def ingest(self, collection: str, paths: list[Path]) -> int:
+        raise RuntimeError("boom")
+
+    def ask(self, collection: str, question: str) -> None:
+        raise RuntimeError("boom")
+
+    def list_collections(self) -> list[str]:
+        raise RuntimeError("boom")
+
+
+@pytest.mark.parametrize(
+    "args", [("ingest", "--collection", "hr", "."), ("ask", "--collection", "hr", "q"), ("list",)]
+)
+def test_cli_reports_unexpected_error_without_traceback(
+    monkeypatch: pytest.MonkeyPatch, args: tuple[str, ...]
+) -> None:
+    monkeypatch.setattr(cli, "get_rag_service", BrokenService)
+    result = run(*args)
+    assert result.exit_code == 2
+    assert "Unexpected error: boom" in result.stderr
+    assert "Traceback" not in result.output
+
+
+def test_cli_reports_unexpected_error_while_building_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def failing_build() -> None:
+        raise ValueError("bad settings")
+
+    monkeypatch.setattr(cli, "get_rag_service", failing_build)
+    result = run("list")
+    assert (result.exit_code, "Unexpected error: bad settings" in result.stderr) == (2, True)

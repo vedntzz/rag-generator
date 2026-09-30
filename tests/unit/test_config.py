@@ -31,20 +31,13 @@ def test_settings_defaults_match_readme() -> None:
     assert (settings.top_k, settings.min_score) == (5, 0.3)
 
 
-def test_settings_temperature_defaults_to_zero() -> None:
-    assert load_settings().llm_temperature == 0
+def test_settings_has_no_temperature_field() -> None:
+    assert "llm_temperature" not in Settings.model_fields
 
 
-def test_settings_temperature_is_none_when_env_var_is_empty(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("RAG_LLM_TEMPERATURE", "")
-    assert load_settings().llm_temperature is None
-
-
-def test_settings_temperature_reads_float_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_ignores_stale_temperature_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RAG_LLM_TEMPERATURE", "0.5")
-    assert load_settings().llm_temperature == 0.5
+    assert not hasattr(load_settings(), "llm_temperature")
 
 
 def test_settings_reads_rag_prefixed_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:

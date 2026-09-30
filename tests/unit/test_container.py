@@ -80,13 +80,13 @@ def test_default_embedder_uses_configured_model_without_download(
     assert embedder.model.model_name == "some/model"  # type: ignore[attr-defined]
 
 
-def test_default_llm_uses_configured_model_temperature_and_key(
+def test_default_llm_uses_configured_model_and_key(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    llm = build_default_llm(make_settings(tmp_path, llm_model="m", llm_temperature=None))
+    llm = build_default_llm(make_settings(tmp_path, llm_model="m"))
     assert isinstance(llm, AnthropicLLM)
-    assert (llm.model, llm.temperature, llm.client.api_key) == ("m", None, "sk-test")
+    assert (llm.model, llm.client.api_key) == ("m", "sk-test")
 
 
 class CountingTextEmbedding:

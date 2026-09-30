@@ -1,10 +1,11 @@
-"""Tests for AnthropicLLM with a mocked Anthropic client (no network)."""
+"""Tests for AnthropicLLM with an autospecced Anthropic client (no network)."""
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import anthropic
 import pytest
+from anthropic.resources.messages import Messages
 
 from rag_generator.domain import LlmReply
 from rag_generator.errors import LlmError
@@ -13,8 +14,15 @@ from rag_generator.llm.anthropic_llm import AnthropicLLM
 MODEL = "claude-haiku-4-5-20251001"
 
 
-def client_returning(*blocks: SimpleNamespace, stop_reason: str = "end_turn") -> MagicMock:
+def autospec_client() -> MagicMock:
+    # Autospec against the real SDK, so a kwarg Messages.create doesn't accept fails the test.
     client = MagicMock()
+    client.messages = create_autospec(Messages, instance=True)
+    return client
+
+
+def client_returning(*blocks: SimpleNamespace, stop_reason: str = "end_turn") -> MagicMock:
+    client = autospec_client()
     response = SimpleNamespace(content=list(blocks), stop_reason=stop_reason)
     client.messages.create.return_value = response
     return client
@@ -25,7 +33,7 @@ def text_block(text: str) -> SimpleNamespace:
 
 
 def client_raising(error: Exception) -> MagicMock:
-    client = MagicMock()
+    client = autospec_client()
     client.messages.create.side_effect = error
     return client
 
@@ -37,21 +45,18 @@ def test_llm_sends_system_user_and_deterministic_settings() -> None:
         model=MODEL,
         system="rules",
         messages=[{"role": "user", "content": "question"}],
-        temperature=0,
         max_tokens=1024,
     )
 
 
-def test_llm_sends_configured_temperature() -> None:
-    client = client_returning(text_block("ok"))
-    AnthropicLLM(MODEL, client, temperature=0.7).complete("s", "u")
-    assert client.messages.create.call_args.kwargs["temperature"] == 0.7
+def test_autospec_client_rejects_kwargs_the_sdk_does_not_accept() -> None:
+    with pytest.raises(TypeError):
+        autospec_client().messages.create(model=MODEL, messages=[], max_tokens=1, temperature=0)
 
 
-def test_llm_omits_temperature_when_none() -> None:
-    client = client_returning(text_block("ok"))
-    AnthropicLLM(MODEL, client, temperature=None).complete("s", "u")
-    assert "temperature" not in client.messages.create.call_args.kwargs
+def test_llm_takes_no_temperature_argument() -> None:
+    with pytest.raises(TypeError):
+        AnthropicLLM(MODEL, autospec_client(), temperature=0)  # type: ignore[call-arg]
 
 
 def test_llm_joins_text_blocks_and_skips_other_blocks() -> None:
