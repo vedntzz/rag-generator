@@ -1,7 +1,9 @@
 """Tests for the composition root; fakes are injected so no model is downloaded."""
 
+from collections.abc import Iterator
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from rag_generator.config import Settings
@@ -85,3 +87,41 @@ def test_default_llm_uses_configured_model_temperature_and_key(
     llm = build_default_llm(make_settings(tmp_path, llm_model="m", llm_temperature=None))
     assert isinstance(llm, AnthropicLLM)
     assert (llm.model, llm.temperature, llm.client.api_key) == ("m", None, "sk-test")
+
+
+class CountingTextEmbedding:
+    """Stands in for fastembed.TextEmbedding and counts how often it is constructed."""
+
+    instances = 0
+
+    def __init__(self, model_name: str) -> None:
+        CountingTextEmbedding.instances += 1
+
+    def passage_embed(self, texts: list[str]) -> Iterator[np.ndarray]:
+        return (np.array(FakeEmbedder().embed_query(text)) for text in texts)
+
+    def query_embed(self, query: str) -> Iterator[np.ndarray]:
+        return iter([np.array(FakeEmbedder().embed_query(query))])
+
+
+@pytest.fixture
+def counting_text_embedding(monkeypatch: pytest.MonkeyPatch) -> type[CountingTextEmbedding]:
+    CountingTextEmbedding.instances = 0
+    monkeypatch.setattr(container, "TextEmbedding", CountingTextEmbedding)
+    return CountingTextEmbedding
+
+
+def test_container_list_collections_never_constructs_text_embedding(
+    tmp_path: Path, counting_text_embedding: type[CountingTextEmbedding]
+) -> None:
+    build_rag_service(make_settings(tmp_path), llm=FakeLLM()).list_collections()
+    assert counting_text_embedding.instances == 0
+
+
+def test_container_constructs_text_embedding_once_on_first_embed(
+    tmp_path: Path, counting_text_embedding: type[CountingTextEmbedding]
+) -> None:
+    service = build_rag_service(make_settings(tmp_path), llm=FakeLLM("24 days [1]."))
+    service.ingest("hr", [write_leave_doc(tmp_path)])
+    service.ask("hr", QUESTION)
+    assert counting_text_embedding.instances == 1

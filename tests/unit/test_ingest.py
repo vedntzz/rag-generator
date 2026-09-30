@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from rag_generator.chunking.recursive_chunker import RecursiveCharacterChunker
+from rag_generator.domain import Document
 from rag_generator.errors import UnsupportedFileTypeError
 from rag_generator.loaders.registry import LoaderRegistry
 from rag_generator.loaders.text_loader import TextLoader
@@ -12,12 +13,14 @@ from rag_generator.pipeline.ingest import IngestService
 from rag_generator.store.numpy_store import NumpyVectorStore
 from tests.fakes import FakeEmbedder
 
+CHUNK_SIZE, CHUNK_OVERLAP = 40, 5
+
 
 @pytest.fixture
 def ingest_service(store: NumpyVectorStore) -> IngestService:
     registry = LoaderRegistry()
     registry.register(".md", TextLoader())
-    chunker = RecursiveCharacterChunker(chunk_size=40, chunk_overlap=5)
+    chunker = RecursiveCharacterChunker(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     return IngestService(registry, chunker, FakeEmbedder(), store)
 
 
@@ -33,12 +36,14 @@ def stored_sources(store: NumpyVectorStore) -> list[str]:
 
 
 def test_ingest_returns_number_of_chunks_indexed(
-    ingest_service: IngestService, store: NumpyVectorStore, tmp_path: Path
+    ingest_service: IngestService, tmp_path: Path
 ) -> None:
-    path = write(tmp_path / "docs" / "leave.md", "Annual leave is 24 days. " * 4)
-    indexed = ingest_service.ingest("hr", [path])
-    assert indexed > 1
-    assert indexed == len(store.search("hr", [1.0] * 64, top_k=100))
+    text = "Annual leave is 24 days. " * 4
+    chunker = RecursiveCharacterChunker(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+    expected = len(chunker.split(Document(source="leave.md", text=text)))
+    path = write(tmp_path / "docs" / "leave.md", text)
+    assert expected > 1
+    assert ingest_service.ingest("hr", [path]) == expected
 
 
 def test_ingest_stores_chunks_under_collection(

@@ -3,7 +3,10 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from rag_generator.domain import Answer
+from rag_generator.errors import InvalidCollectionNameError
 from rag_generator.pipeline.rag_service import RagService
 
 
@@ -30,3 +33,17 @@ def test_rag_service_list_collections_delegates_to_store() -> None:
     service, _, _, store = make_service()
     store.list_collections.return_value = ["hr", "product"]
     assert service.list_collections() == ["hr", "product"]
+
+
+def test_rag_service_ingest_rejects_invalid_name_before_loading_anything() -> None:
+    service, ingest, _, _ = make_service()
+    with pytest.raises(InvalidCollectionNameError):
+        service.ingest("../etc", [Path("docs")])
+    ingest.ingest.assert_not_called()
+
+
+def test_rag_service_ask_rejects_invalid_name_before_embedding_anything() -> None:
+    service, _, answer, _ = make_service()
+    with pytest.raises(InvalidCollectionNameError):
+        service.ask("has space", "How much leave?")
+    answer.ask.assert_not_called()
