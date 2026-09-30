@@ -11,7 +11,7 @@ No code changes between document sets: each set lives in its own named **collect
 
 ## Quick start
 ```bash
-git clone <repo-url> && cd rag-generator
+git clone https://github.com/vedntzz/rag-generator.git && cd rag-generator
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env            # add ANTHROPIC_API_KEY

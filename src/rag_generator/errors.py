@@ -35,3 +35,8 @@ class NoDocumentsFoundError(RagError):
     def __init__(self, paths: Sequence[Path]) -> None:
         super().__init__(f"No supported documents found in: {', '.join(map(str, paths))}")
         self.paths = list(paths)
+
+
+class MissingApiKeyError(RagError):
+    def __init__(self) -> None:
+        super().__init__("ANTHROPIC_API_KEY is not set. Add it to .env in the repository root.")

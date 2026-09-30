@@ -7,7 +7,9 @@ from rag_generator.chunking.recursive_chunker import RecursiveCharacterChunker
 from rag_generator.config import Settings
 from rag_generator.embedding.fastembed_embedder import FastEmbedEmbedder
 from rag_generator.embedding.lazy_embedder import LazyEmbedder
+from rag_generator.errors import MissingApiKeyError
 from rag_generator.llm.anthropic_llm import AnthropicLLM
+from rag_generator.llm.lazy_llm import LazyLLM
 from rag_generator.loaders.docx_loader import DocxLoader
 from rag_generator.loaders.pdf_loader import PdfLoader
 from rag_generator.loaders.registry import LoaderRegistry
@@ -24,7 +26,7 @@ def build_rag_service(
 ) -> RagService:
     """Wire every adapter; embedder/llm overrides let tests inject fakes (no download, no API)."""
     embedder = build_lazy_default_embedder(settings) if embedder is None else embedder
-    llm = build_default_llm(settings) if llm is None else llm
+    llm = build_lazy_default_llm(settings) if llm is None else llm
     store = NumpyVectorStore(settings.data_dir)
     chunker = RecursiveCharacterChunker(settings.chunk_size, settings.chunk_overlap)
     ingest = IngestService(build_loader_registry(), chunker, embedder, store)
@@ -50,7 +52,13 @@ def build_default_embedder(settings: Settings) -> FastEmbedEmbedder:
     return FastEmbedEmbedder(TextEmbedding(model_name=settings.embed_model))
 
 
+def build_lazy_default_llm(settings: Settings) -> LazyLLM:
+    # The key is only checked when an answer actually needs the LLM, so list/ingest never need it.
+    return LazyLLM(lambda: build_default_llm(settings))
+
+
 def build_default_llm(settings: Settings) -> AnthropicLLM:
-    key = settings.anthropic_api_key
-    client = anthropic.Anthropic(api_key=key.get_secret_value() if key else None)
-    return AnthropicLLM(settings.llm_model, client)
+    key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else ""
+    if not key:
+        raise MissingApiKeyError()
+    return AnthropicLLM(settings.llm_model, anthropic.Anthropic(api_key=key))

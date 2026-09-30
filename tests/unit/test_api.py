@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from rag_generator.config import Settings
 from rag_generator.domain import LlmReply
-from rag_generator.errors import LlmError, NoDocumentsFoundError
+from rag_generator.errors import LlmError, MissingApiKeyError, NoDocumentsFoundError
 from rag_generator.interfaces.api import app, get_rag_service
 from rag_generator.llm.prompts import NOT_FOUND_MESSAGE
 from rag_generator.pipeline.container import build_rag_service
@@ -149,3 +149,12 @@ def test_api_upload_returns_400_when_no_documents_found() -> None:
         response = test_client.post("/collections/hr/documents", files=[LEAVE_FILE])
         assert response.status_code == 400
         assert response.json()["detail"] == "No supported documents found in: upload"
+
+
+def test_api_ask_returns_503_when_api_key_missing() -> None:
+    service = MagicMock()
+    service.ask.side_effect = MissingApiKeyError()
+    for test_client in client_for(service):
+        response = test_client.post("/collections/hr/ask", json=QUESTION)
+        assert response.status_code == 503
+        assert response.json()["detail"] == str(MissingApiKeyError())

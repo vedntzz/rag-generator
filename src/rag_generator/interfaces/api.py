@@ -16,6 +16,7 @@ from rag_generator.errors import (
     CollectionNotFoundError,
     InvalidCollectionNameError,
     LlmError,
+    MissingApiKeyError,
     NoDocumentsFoundError,
     RagError,
     UnsupportedFileTypeError,
@@ -30,6 +31,7 @@ ERROR_STATUS_CODES: dict[type[RagError], int] = {
     NoDocumentsFoundError: 400,
     InvalidCollectionNameError: 422,
     LlmError: 502,
+    MissingApiKeyError: 503,
 }
 
 
