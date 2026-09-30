@@ -1,36 +1,12 @@
-"""Tests for NumpyVectorStore."""
+"""Tests for NumpyVectorStore search and replace-by-source behaviour."""
 
 import math
-from pathlib import Path
 
 import pytest
 
-from rag_generator.domain import Chunk, ScoredChunk
 from rag_generator.errors import CollectionNotFoundError
 from rag_generator.store.numpy_store import NumpyVectorStore
-
-
-@pytest.fixture
-def data_dir(tmp_path: Path) -> Path:
-    return tmp_path / "data"
-
-
-@pytest.fixture
-def store(data_dir: Path) -> NumpyVectorStore:
-    return NumpyVectorStore(data_dir)
-
-
-def chunk(source: str, index: int = 0) -> Chunk:
-    return Chunk(source=source, index=index, text=f"{source}#{index}")
-
-
-def add_axis_chunks(store: NumpyVectorStore, collection: str = "hr") -> None:
-    chunks = [chunk("x.md"), chunk("y.md"), chunk("xy.md")]
-    store.add(collection, chunks, [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
-
-
-def sources(results: list[ScoredChunk]) -> list[str]:
-    return [scored.chunk.source for scored in results]
+from tests.store_helpers import add_axis_chunks, chunk, sources
 
 
 def test_store_search_returns_top_k_by_descending_cosine(store: NumpyVectorStore) -> None:
@@ -65,20 +41,6 @@ def test_store_add_keeps_other_sources_when_readding_one(store: NumpyVectorStore
 def test_store_add_raises_when_chunk_and_vector_counts_differ(store: NumpyVectorStore) -> None:
     with pytest.raises(ValueError):
         store.add("hr", [chunk("a.md"), chunk("b.md")], [[1.0, 0.0]])
-
-
-def test_store_persists_vectors_and_chunks_files(store: NumpyVectorStore, data_dir: Path) -> None:
-    add_axis_chunks(store)
-    names = sorted(path.name for path in (data_dir / "hr").iterdir())
-    assert names == ["chunks.json", "vectors.npy"]
-
-
-def test_store_fresh_instance_reloads_persisted_collection(
-    store: NumpyVectorStore, data_dir: Path
-) -> None:
-    add_axis_chunks(store)
-    reloaded = NumpyVectorStore(data_dir).search("hr", [1.0, 0.0], top_k=1)
-    assert [r.chunk for r in reloaded] == [chunk("x.md")]
 
 
 def test_store_isolates_collections(store: NumpyVectorStore) -> None:
