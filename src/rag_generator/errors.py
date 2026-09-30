@@ -15,3 +15,9 @@ class CollectionNotFoundError(RagError):
     def __init__(self, collection: str) -> None:
         super().__init__(f"Collection not found: '{collection}'")
         self.collection = collection
+
+
+class InvalidCollectionNameError(RagError):
+    def __init__(self, collection: str) -> None:
+        super().__init__(f"Invalid collection name: '{collection}'")
+        self.collection = collection

@@ -29,6 +29,8 @@ class VectorStore(Protocol):
     add() raises ValueError when len(chunks) != len(vectors).
     search() returns up to top_k chunks by descending cosine score; raises
     CollectionNotFoundError for a missing collection. has_collection() returns False instead.
+    Collection names must match ^[A-Za-z0-9_-]{1,64}$; methods taking a name raise
+    InvalidCollectionNameError otherwise.
     """
 
     def add(self, collection: str, chunks: Sequence[Chunk], vectors: list[list[float]]) -> None: ...
