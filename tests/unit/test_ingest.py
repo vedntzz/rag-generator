@@ -6,7 +6,7 @@ import pytest
 
 from rag_generator.chunking.recursive_chunker import RecursiveCharacterChunker
 from rag_generator.domain import Document
-from rag_generator.errors import UnsupportedFileTypeError
+from rag_generator.errors import NoDocumentsFoundError, UnsupportedFileTypeError
 from rag_generator.loaders.registry import LoaderRegistry
 from rag_generator.loaders.text_loader import TextLoader
 from rag_generator.pipeline.ingest import IngestService
@@ -64,12 +64,20 @@ def test_ingest_loads_every_given_path(
     assert stored_sources(store) == ["a.md", "c.md", "nested/b.md"]
 
 
-def test_ingest_of_directory_without_documents_indexes_nothing(
+def test_ingest_raises_when_no_supported_documents_found(
     ingest_service: IngestService, store: NumpyVectorStore, tmp_path: Path
 ) -> None:
-    (tmp_path / "empty").mkdir()
-    assert ingest_service.ingest("hr", [tmp_path / "empty"]) == 0
+    write(tmp_path / "docs" / "budget.xlsx", "x")
+    with pytest.raises(NoDocumentsFoundError):
+        ingest_service.ingest("hr", [tmp_path / "docs"])
     assert store.has_collection("hr") is False
+
+
+def test_ingest_of_empty_but_supported_document_is_not_an_error(
+    ingest_service: IngestService, tmp_path: Path
+) -> None:
+    empty = write(tmp_path / "empty.md", "")
+    assert ingest_service.ingest("hr", [empty]) == 0
 
 
 def test_ingest_raises_for_unsupported_file_and_stores_nothing(

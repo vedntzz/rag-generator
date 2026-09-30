@@ -1,9 +1,12 @@
 """Tests for domain error types and their messages."""
 
+from pathlib import Path
+
 from rag_generator.errors import (
     CollectionNotFoundError,
     InvalidCollectionNameError,
     LlmError,
+    NoDocumentsFoundError,
     RagError,
     UnsupportedFileTypeError,
 )
@@ -32,6 +35,7 @@ def test_errors_share_rag_error_base_class() -> None:
     assert issubclass(CollectionNotFoundError, RagError)
     assert issubclass(InvalidCollectionNameError, RagError)
     assert issubclass(LlmError, RagError)
+    assert issubclass(NoDocumentsFoundError, RagError)
 
 
 def test_invalid_collection_name_error_message_names_collection() -> None:
@@ -45,3 +49,8 @@ def test_invalid_collection_name_error_keeps_collection() -> None:
 
 def test_llm_error_message_includes_detail() -> None:
     assert str(LlmError("Connection error.")) == "LLM request failed: Connection error."
+
+
+def test_no_documents_found_error_message_lists_paths() -> None:
+    error = NoDocumentsFoundError([Path("docs"), Path("more/notes")])
+    assert str(error) == "No supported documents found in: docs, more/notes"

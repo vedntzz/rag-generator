@@ -2,13 +2,14 @@
 
 from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from rag_generator.config import Settings
 from rag_generator.domain import LlmReply
-from rag_generator.errors import LlmError
+from rag_generator.errors import LlmError, NoDocumentsFoundError
 from rag_generator.interfaces.api import app, get_rag_service
 from rag_generator.llm.prompts import NOT_FOUND_MESSAGE
 from rag_generator.pipeline.container import build_rag_service
@@ -139,3 +140,12 @@ def test_api_upload_removes_temporary_directory_when_ingest_fails(tmp_path: Path
     for test_client in client_for(service):
         assert test_client.post("/collections/hr/documents", files=[bad]).status_code == 400
     assert recorded and not any(path.parent.exists() for path in recorded)
+
+
+def test_api_upload_returns_400_when_no_documents_found() -> None:
+    service = MagicMock()
+    service.ingest.side_effect = NoDocumentsFoundError([Path("upload")])
+    for test_client in client_for(service):
+        response = test_client.post("/collections/hr/documents", files=[LEAVE_FILE])
+        assert response.status_code == 400
+        assert response.json()["detail"] == "No supported documents found in: upload"

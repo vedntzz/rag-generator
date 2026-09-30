@@ -98,6 +98,16 @@ def test_cli_ingest_reports_invalid_collection_name_on_stderr(
     assert "Invalid collection name: 'bad name'" in result.stderr
 
 
+def test_cli_ingest_reports_no_documents_found_on_stderr(
+    service: RagService, tmp_path: Path
+) -> None:
+    empty = tmp_path / "nothing"
+    empty.mkdir()
+    result = run("ingest", "--collection", "hr", str(empty))
+    assert result.exit_code == 1
+    assert f"No supported documents found in: {empty}" in result.stderr
+
+
 def test_cli_list_prints_collections_one_per_line(service: RagService, docs: Path) -> None:
     service.ingest("product", [docs])
     service.ingest("hr", [docs])
