@@ -12,7 +12,7 @@ No code changes between document sets: each set lives in its own named **collect
 ## Quick start
 ```bash
 git clone <repo-url> && cd rag-generator
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env            # add ANTHROPIC_API_KEY
 
@@ -27,6 +27,14 @@ rag ingest --collection product sample_docs/product
 rag ask --collection product "What does the Pro plan include?"
 ```
 
+## Demo
+Real output from the sample documents:
+```text
+rag ask -c hr "How many leave days do employees get?" → 24 days answer citing [1] leave_policy.md (score 0.87)
+rag ask -c hr "What does the Pro plan cost?" → "I couldn't find the answer in the provided documents."
+rag ask -c product "What does the Pro plan cost?" → $49/month citing [1] pricing.md (score 0.88)
+```
+
 ## HTTP API
 ```bash
 uvicorn rag_generator.interfaces.api:app --reload
@@ -34,7 +42,7 @@ uvicorn rag_generator.interfaces.api:app --reload
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | `/collections/{name}/documents` | multipart `files` | `{ "chunks_indexed": int }` |
-| POST | `/collections/{name}/ask` | `{ "question": str }` | `{ "answer", "grounded", "citations": [...] }` |
+| POST | `/collections/{name}/ask` | `{ "question": str }` | `{ "answer", "grounded", "truncated", "citations": [...] }` |
 | GET | `/collections` | none | `["hr", "product"]` |
 
 Example response:
@@ -42,7 +50,8 @@ Example response:
 {
   "answer": "Employees receive 24 days of paid leave per year [1].",
   "grounded": true,
-  "citations": [{ "source": "leave_policy.pdf", "chunk_index": 3, "score": 0.82 }]
+  "truncated": false,
+  "citations": [{ "reference": 1, "source": "leave_policy.pdf", "chunk_index": 3, "score": 0.82 }]
 }
 ```
 
@@ -107,8 +116,16 @@ transcripts/  # full AI agent session export
 Built with Claude Code using agentic TDD. `CLAUDE.md` holds the rules the agent followed.
 The full session transcript is in `transcripts/`.
 
-## Limitations and next steps
+## Known limitations
+- Re-ingesting a file that has become empty keeps its old chunks: it yields no new chunks, so nothing replaces them
+- Files with the same base name under two ingest paths (e.g. `a/policy.md`, `b/policy.md`) collide on one source name
+- Concurrent ingests into one collection are last-write-wins: one ingest's chunks can be lost (the file is never corrupted)
 - No OCR: scanned PDFs yield no text
+- bge-small scores unrelated text around 0.4–0.6, so `RAG_MIN_SCORE` is a weak filter; the second guard is the
+  prompt's exact not-found reply, which is returned as `grounded: false`
+- `.env` is read from the current directory, so run `rag` and `uvicorn` from the repository root
 - Brute-force cosine search is fine to ~100k chunks; beyond that use an ANN store
-- Next: hybrid retrieval (BM25 + dense), a re-ranker, streaming answers, an eval set with
+
+## Next steps
+- Hybrid retrieval (BM25 + dense), a re-ranker, streaming answers, an eval set with
   faithfulness scoring
