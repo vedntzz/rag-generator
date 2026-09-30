@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
 
-from rag_generator.domain import Chunk, Document, ScoredChunk
+from rag_generator.domain import Chunk, Document, LlmReply, ScoredChunk
 
 
 class DocumentLoader(Protocol):
@@ -45,4 +45,6 @@ class VectorStore(Protocol):
 
 
 class LLM(Protocol):
-    def complete(self, system: str, user: str) -> str: ...
+    """truncated=True means generation hit the output-token limit mid-answer."""
+
+    def complete(self, system: str, user: str) -> LlmReply: ...

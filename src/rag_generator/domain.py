@@ -34,3 +34,10 @@ class Answer:
     text: str
     citations: list[Citation]
     grounded: bool
+    truncated: bool = False
+
+
+@dataclass(frozen=True)
+class LlmReply:
+    text: str
+    truncated: bool = False

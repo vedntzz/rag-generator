@@ -6,6 +6,8 @@ import zlib
 from collections.abc import Sequence
 from typing import NamedTuple
 
+from rag_generator.domain import LlmReply
+
 WORD_PATTERN = re.compile(r"[a-z0-9]+")
 
 
@@ -38,10 +40,11 @@ class RecordedPrompt(NamedTuple):
 class FakeLLM:
     """Records every (system, user) prompt pair and always returns the same canned answer."""
 
-    def __init__(self, answer: str = "Canned answer [1].") -> None:
+    def __init__(self, answer: str = "Canned answer [1].", truncated: bool = False) -> None:
         self.answer = answer
+        self.truncated = truncated
         self.prompts: list[RecordedPrompt] = []
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str) -> LlmReply:
         self.prompts.append(RecordedPrompt(system, user))
-        return self.answer
+        return LlmReply(text=self.answer, truncated=self.truncated)
