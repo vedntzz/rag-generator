@@ -18,7 +18,7 @@ dependencies = [
     "pypdf",
     "python-docx",
     "fastembed",
-    "anthropic",
+    "anthropic>=1.9,<2",
 ]
 
 [project.optional-dependencies]

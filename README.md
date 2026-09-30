@@ -48,10 +48,10 @@ uvicorn rag_generator.interfaces.api:app --reload
 Example response:
 ```json
 {
-  "answer": "Employees receive 24 days of paid leave per year [1].",
+  "answer": "Full-time employees receive 24 paid leave days per calendar year [1].",
   "grounded": true,
   "truncated": false,
-  "citations": [{ "reference": 1, "source": "leave_policy.pdf", "chunk_index": 3, "score": 0.82 }]
+  "citations": [{ "reference": 1, "source": "leave_policy.md", "chunk_index": 0, "score": 0.87 }]
 }
 ```
 
@@ -115,6 +115,12 @@ transcripts/  # full AI agent session export
 ## How this was built
 Built with Claude Code using agentic TDD. `CLAUDE.md` holds the rules the agent followed.
 The full session transcript is in `transcripts/`.
+
+## Bug found by the real smoke test
+All unit tests passed, but the first real `rag ask` failed: anthropic 1.9.0's `Messages.create()` has no
+`temperature` parameter, and the unspecced `MagicMock` client had accepted it silently. The fix
+(157c982) removed the parameter; the mock is now built with `create_autospec` against the real SDK, and
+`test_autospec_client_rejects_kwargs_the_sdk_does_not_accept` (cae5e86) proves invalid kwargs now fail.
 
 ## Known limitations
 - Re-ingesting a file that has become empty keeps its old chunks: it yields no new chunks, so nothing replaces them

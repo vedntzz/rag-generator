@@ -54,7 +54,8 @@ Ports (Protocols in `ports.py`): `DocumentLoader`, `Chunker`, `Embedder`, `Vecto
 - `LlmReply(text: str, truncated: bool = False)` (what the `LLM` port returns)
 
 ## Grounding contract
-1. Embed question, retrieve `top_k` (default 5) by cosine similarity.
+1. Check the collection exists (else `CollectionNotFoundError`, before any embedding), then embed
+   question and retrieve `top_k` (default 5) by cosine similarity.
 2. Drop chunks with score < `min_score` (default 0.3).
 3. If nothing remains → return `Answer(NOT_FOUND_MESSAGE, [], grounded=False)` WITHOUT calling the LLM.
 4. Prompt tells the LLM: answer only from numbered context, cite as `[n]`, otherwise reply
@@ -76,9 +77,9 @@ src/rag_generator/
   config.py  domain.py  ports.py  errors.py
   loaders/     registry.py text_loader.py pdf_loader.py docx_loader.py
   chunking/    recursive_chunker.py
-  embedding/   fastembed_embedder.py
+  embedding/   fastembed_embedder.py lazy_embedder.py
   store/       numpy_store.py
-  llm/         anthropic_llm.py prompts.py
+  llm/         anthropic_llm.py prompts.py lazy_llm.py
   pipeline/    ingest.py answer.py rag_service.py container.py
   interfaces/  cli.py api.py
 tests/
