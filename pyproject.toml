@@ -41,3 +41,6 @@ src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "ANN"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["rag_generator", "tests"]
