@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from rag_generator.domain import Answer, Chunk, Citation, Document, ScoredChunk
+from rag_generator.domain import Answer, Chunk, Citation, Document, LlmReply, ScoredChunk
 
 
 def make_chunk() -> Chunk:
@@ -63,3 +63,21 @@ def test_scored_chunk_exposes_chunk_and_score() -> None:
     chunk = make_chunk()
     scored = ScoredChunk(chunk=chunk, score=0.82)
     assert (scored.chunk, scored.score) == (chunk, 0.82)
+
+
+def test_answer_truncated_defaults_to_false() -> None:
+    assert Answer(text="24 days [1].", citations=[], grounded=True).truncated is False
+
+
+def test_answer_truncated_can_be_flagged() -> None:
+    assert Answer(text="24 days", citations=[], grounded=True, truncated=True).truncated is True
+
+
+def test_llm_reply_is_frozen_when_mutated() -> None:
+    reply = LlmReply(text="ok")
+    with pytest.raises(FrozenInstanceError):
+        reply.text = "changed"  # type: ignore[misc]
+
+
+def test_llm_reply_truncated_defaults_to_false() -> None:
+    assert LlmReply(text="ok").truncated is False

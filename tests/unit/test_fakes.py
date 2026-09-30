@@ -1,5 +1,6 @@
 """Tests proving the test fakes are deterministic."""
 
+from rag_generator.domain import LlmReply
 from tests.fakes import FakeEmbedder, FakeLLM, RecordedPrompt
 
 
@@ -25,7 +26,7 @@ def test_fake_embedder_vectors_have_configured_dimension() -> None:
 
 def test_fake_llm_returns_canned_answer() -> None:
     llm = FakeLLM(answer="24 days [1].")
-    assert llm.complete("system rules", "user question") == "24 days [1]."
+    assert llm.complete("system rules", "user question") == LlmReply("24 days [1].")
 
 
 def test_fake_llm_records_system_and_user_prompts_in_order() -> None:
@@ -33,3 +34,7 @@ def test_fake_llm_records_system_and_user_prompts_in_order() -> None:
     llm.complete("rules", "first")
     llm.complete("rules", "second")
     assert llm.prompts == [RecordedPrompt("rules", "first"), RecordedPrompt("rules", "second")]
+
+
+def test_fake_llm_can_report_truncated_reply() -> None:
+    assert FakeLLM(answer="partial", truncated=True).complete("s", "u").truncated is True
