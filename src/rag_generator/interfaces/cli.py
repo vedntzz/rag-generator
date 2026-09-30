@@ -22,13 +22,16 @@ def get_rag_service() -> RagService:
 
 
 @contextmanager
-def exit_on_rag_error() -> Iterator[None]:
-    # Expected failures print a one-line message instead of a traceback.
+def exit_on_error() -> Iterator[None]:
+    # Known failures exit 1, anything else exits 2; neither prints a traceback.
     try:
         yield
     except RagError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from error
+    except Exception as error:
+        typer.echo(f"Unexpected error: {error}", err=True)
+        raise typer.Exit(code=2) from error
 
 
 @app.command()
@@ -37,7 +40,7 @@ def ingest(
     paths: Annotated[list[Path], typer.Argument(exists=True, help="Files or directories.")],
 ) -> None:
     """Index files or directories into a collection."""
-    with exit_on_rag_error():
+    with exit_on_error():
         count = get_rag_service().ingest(collection, paths)
     typer.echo(f"Indexed {count} chunk(s) into '{collection}'.")
 
@@ -45,7 +48,7 @@ def ingest(
 @app.command()
 def ask(collection: CollectionOption, question: str) -> None:
     """Answer a question from a collection, with citations."""
-    with exit_on_rag_error():
+    with exit_on_error():
         answer = get_rag_service().ask(collection, question)
     typer.echo(format_answer(answer))
 
@@ -53,7 +56,9 @@ def ask(collection: CollectionOption, question: str) -> None:
 @app.command(name="list")
 def list_collections() -> None:
     """List collection names."""
-    for name in get_rag_service().list_collections():
+    with exit_on_error():
+        names = get_rag_service().list_collections()
+    for name in names:
         typer.echo(name)
 
 
@@ -63,4 +68,5 @@ def format_answer(answer: Answer) -> str:
 
 
 def format_citation(citation: Citation) -> str:
-    return f"- {citation.source} (chunk {citation.chunk_index}, score {citation.score:.2f})"
+    location = f"chunk {citation.chunk_index}, score {citation.score:.2f}"
+    return f"[{citation.reference}] {citation.source} ({location})"

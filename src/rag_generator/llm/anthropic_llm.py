@@ -5,20 +5,13 @@ import anthropic
 from rag_generator.domain import LlmReply
 from rag_generator.errors import LlmError
 
-DEFAULT_TEMPERATURE = 0.0
 MAX_TOKENS = 1024
 
 
 class AnthropicLLM:
-    def __init__(
-        self,
-        model: str,
-        client: anthropic.Anthropic,
-        temperature: float | None = DEFAULT_TEMPERATURE,
-    ) -> None:
+    def __init__(self, model: str, client: anthropic.Anthropic) -> None:
         self.model = model
         self.client = client
-        self.temperature = temperature
 
     def complete(self, system: str, user: str) -> LlmReply:
         try:
@@ -28,14 +21,11 @@ class AnthropicLLM:
         return reply_from_message(response)
 
     def _create_message(self, system: str, user: str) -> anthropic.types.Message:
-        # Some models reject any temperature, so None leaves it out of the request entirely.
-        sampling = {} if self.temperature is None else {"temperature": self.temperature}
         return self.client.messages.create(
             model=self.model,
             system=system,
             messages=[{"role": "user", "content": user}],
             max_tokens=MAX_TOKENS,
-            **sampling,
         )
 
 

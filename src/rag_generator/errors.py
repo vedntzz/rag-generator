@@ -1,5 +1,8 @@
 """Domain errors raised by the RAG pipeline."""
 
+from collections.abc import Sequence
+from pathlib import Path
+
 
 class RagError(Exception):
     """Base class for all RAG Generator errors."""
@@ -26,3 +29,9 @@ class InvalidCollectionNameError(RagError):
 class LlmError(RagError):
     def __init__(self, detail: str) -> None:
         super().__init__(f"LLM request failed: {detail}")
+
+
+class NoDocumentsFoundError(RagError):
+    def __init__(self, paths: Sequence[Path]) -> None:
+        super().__init__(f"No supported documents found in: {', '.join(map(str, paths))}")
+        self.paths = list(paths)

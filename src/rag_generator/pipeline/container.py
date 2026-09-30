@@ -53,4 +53,4 @@ def build_default_embedder(settings: Settings) -> FastEmbedEmbedder:
 def build_default_llm(settings: Settings) -> AnthropicLLM:
     key = settings.anthropic_api_key
     client = anthropic.Anthropic(api_key=key.get_secret_value() if key else None)
-    return AnthropicLLM(settings.llm_model, client, settings.llm_temperature)
+    return AnthropicLLM(settings.llm_model, client)

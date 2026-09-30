@@ -19,6 +19,7 @@ cp .env.example .env            # add ANTHROPIC_API_KEY
 rag ingest --collection hr sample_docs/hr
 rag ask --collection hr "How many leave days do employees get?"
 ```
+Run rag from the repository root so .env is found.
 
 Swap in a completely different document set, with no code changes:
 ```bash

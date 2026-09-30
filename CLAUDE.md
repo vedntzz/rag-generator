@@ -49,8 +49,9 @@ Ports (Protocols in `ports.py`): `DocumentLoader`, `Chunker`, `Embedder`, `Vecto
 - `Document(source: str, text: str)`
 - `Chunk(source: str, index: int, text: str)`
 - `ScoredChunk(chunk: Chunk, score: float)`
-- `Citation(source: str, chunk_index: int, score: float)`
-- `Answer(text: str, citations: list[Citation], grounded: bool)`
+- `Citation(source: str, chunk_index: int, score: float, reference: int)` (`reference` is the `[n]` used in the reply)
+- `Answer(text: str, citations: list[Citation], grounded: bool, truncated: bool = False)` (`truncated`: reply hit the output-token limit)
+- `LlmReply(text: str, truncated: bool = False)` (what the `LLM` port returns)
 
 ## Grounding contract
 1. Embed question, retrieve `top_k` (default 5) by cosine similarity.

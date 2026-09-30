@@ -3,6 +3,7 @@
 import re
 
 from rag_generator.domain import Answer, Citation, LlmReply, ScoredChunk
+from rag_generator.errors import CollectionNotFoundError
 from rag_generator.llm.prompts import NOT_FOUND_MESSAGE, build_system_prompt, build_user_prompt
 from rag_generator.ports import LLM, Embedder, VectorStore
 
@@ -20,6 +21,8 @@ class AnswerService:
         self.min_score = min_score
 
     def ask(self, collection: str, question: str) -> Answer:
+        if not self.store.has_collection(collection):
+            raise CollectionNotFoundError(collection)
         hits = self._retrieve_relevant_chunks(collection, question)
         if not hits:
             # Nothing relevant was retrieved, so the LLM is never given a chance to guess.
@@ -43,8 +46,9 @@ def answer_from_reply(reply: LlmReply, hits: list[ScoredChunk]) -> Answer:
 def cite_referenced_chunks(text: str, hits: list[ScoredChunk]) -> list[Citation]:
     # [n] is 1-based into hits; numbers outside 1..len(hits) are ignored, not errors.
     numbers = sorted({int(number) for number in CITATION_PATTERN.findall(text)})
-    return [citation_for(hits[n - 1]) for n in numbers if 1 <= n <= len(hits)]
+    return [citation_for(hits[n - 1], n) for n in numbers if 1 <= n <= len(hits)]
 
 
-def citation_for(hit: ScoredChunk) -> Citation:
-    return Citation(source=hit.chunk.source, chunk_index=hit.chunk.index, score=hit.score)
+def citation_for(hit: ScoredChunk, reference: int) -> Citation:
+    chunk = hit.chunk
+    return Citation(chunk.source, chunk.index, hit.score, reference=reference)

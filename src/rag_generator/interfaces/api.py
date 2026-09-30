@@ -16,6 +16,7 @@ from rag_generator.errors import (
     CollectionNotFoundError,
     InvalidCollectionNameError,
     LlmError,
+    NoDocumentsFoundError,
     RagError,
     UnsupportedFileTypeError,
 )
@@ -26,6 +27,7 @@ app = FastAPI(title="RAG Generator")
 ERROR_STATUS_CODES: dict[type[RagError], int] = {
     CollectionNotFoundError: 404,
     UnsupportedFileTypeError: 400,
+    NoDocumentsFoundError: 400,
     InvalidCollectionNameError: 422,
     LlmError: 502,
 }
@@ -36,6 +38,7 @@ class AskRequest(BaseModel):
 
 
 class CitationResponse(BaseModel):
+    reference: int
     source: str
     chunk_index: int
     score: float

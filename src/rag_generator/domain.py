@@ -32,6 +32,7 @@ class Citation:
     source: str
     chunk_index: int
     score: float
+    reference: int
 
 
 @dataclass(frozen=True)

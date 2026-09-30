@@ -3,7 +3,8 @@
 from collections.abc import Sequence
 from pathlib import Path
 
-from rag_generator.domain import Chunk
+from rag_generator.domain import Document
+from rag_generator.errors import NoDocumentsFoundError
 from rag_generator.loaders.registry import LoaderRegistry
 from rag_generator.ports import Chunker, Embedder, VectorStore
 
@@ -19,11 +20,14 @@ class IngestService:
 
     def ingest(self, collection: str, paths: Sequence[Path]) -> int:
         # Every path is loaded before anything is stored, so a bad file aborts the whole batch.
-        chunks = self._load_and_chunk(paths)
+        documents = self._load_documents(paths)
+        chunks = [chunk for document in documents for chunk in self.chunker.split(document)]
         vectors = self.embedder.embed_documents([chunk.text for chunk in chunks])
         self.store.add(collection, chunks, vectors)
         return len(chunks)
 
-    def _load_and_chunk(self, paths: Sequence[Path]) -> list[Chunk]:
+    def _load_documents(self, paths: Sequence[Path]) -> list[Document]:
         documents = [document for path in paths for document in self.registry.load_path(path)]
-        return [chunk for document in documents for chunk in self.chunker.split(document)]
+        if not documents:
+            raise NoDocumentsFoundError(paths)
+        return documents
