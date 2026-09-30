@@ -3,6 +3,7 @@
 from rag_generator.errors import (
     CollectionNotFoundError,
     InvalidCollectionNameError,
+    LlmError,
     RagError,
     UnsupportedFileTypeError,
 )
@@ -30,6 +31,7 @@ def test_errors_share_rag_error_base_class() -> None:
     assert issubclass(UnsupportedFileTypeError, RagError)
     assert issubclass(CollectionNotFoundError, RagError)
     assert issubclass(InvalidCollectionNameError, RagError)
+    assert issubclass(LlmError, RagError)
 
 
 def test_invalid_collection_name_error_message_names_collection() -> None:
@@ -39,3 +41,7 @@ def test_invalid_collection_name_error_message_names_collection() -> None:
 
 def test_invalid_collection_name_error_keeps_collection() -> None:
     assert InvalidCollectionNameError("../etc").collection == "../etc"
+
+
+def test_llm_error_message_includes_detail() -> None:
+    assert str(LlmError("Connection error.")) == "LLM request failed: Connection error."
