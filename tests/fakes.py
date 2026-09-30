@@ -6,6 +6,8 @@ import zlib
 from collections.abc import Sequence
 from typing import NamedTuple
 
+import numpy as np
+
 from rag_generator.domain import LlmReply
 
 WORD_PATTERN = re.compile(r"[a-z0-9]+")
@@ -48,3 +50,16 @@ class FakeLLM:
     def complete(self, system: str, user: str) -> LlmReply:
         self.prompts.append(RecordedPrompt(system, user))
         return LlmReply(text=self.answer, truncated=self.truncated)
+
+
+class FakeTextEmbedding:
+    """Stands in for fastembed.TextEmbedding (same method names), backed by FakeEmbedder."""
+
+    def __init__(self, model_name: str = "fake") -> None:
+        self.model_name = model_name
+
+    def passage_embed(self, texts: Sequence[str]) -> list[np.ndarray]:
+        return [np.array(FakeEmbedder().embed_query(text)) for text in texts]
+
+    def query_embed(self, query: str) -> list[np.ndarray]:
+        return [np.array(FakeEmbedder().embed_query(query))]

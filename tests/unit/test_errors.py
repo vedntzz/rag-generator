@@ -6,6 +6,7 @@ from rag_generator.errors import (
     CollectionNotFoundError,
     InvalidCollectionNameError,
     LlmError,
+    MissingApiKeyError,
     NoDocumentsFoundError,
     RagError,
     UnsupportedFileTypeError,
@@ -35,6 +36,7 @@ def test_errors_share_rag_error_base_class() -> None:
     assert issubclass(CollectionNotFoundError, RagError)
     assert issubclass(InvalidCollectionNameError, RagError)
     assert issubclass(LlmError, RagError)
+    assert issubclass(MissingApiKeyError, RagError)
     assert issubclass(NoDocumentsFoundError, RagError)
 
 
@@ -54,3 +56,8 @@ def test_llm_error_message_includes_detail() -> None:
 def test_no_documents_found_error_message_lists_paths() -> None:
     error = NoDocumentsFoundError([Path("docs"), Path("more/notes")])
     assert str(error) == "No supported documents found in: docs, more/notes"
+
+
+def test_missing_api_key_error_message_explains_fix() -> None:
+    expected = "ANTHROPIC_API_KEY is not set. Add it to .env in the repository root."
+    assert str(MissingApiKeyError()) == expected

@@ -11,7 +11,7 @@ from rag_generator.llm.prompts import NOT_FOUND_MESSAGE
 from rag_generator.pipeline import container
 from rag_generator.pipeline.container import build_rag_service
 from rag_generator.pipeline.rag_service import RagService
-from tests.fakes import FakeEmbedder, FakeLLM
+from tests.fakes import FakeEmbedder, FakeLLM, FakeTextEmbedding
 
 QUESTION = "How many days of annual leave do employees get?"
 
@@ -164,3 +164,28 @@ def test_cli_reports_unexpected_error_while_building_service(
     monkeypatch.setattr(cli, "get_rag_service", failing_build)
     result = run("list")
     assert (result.exit_code, "Unexpected error: bad settings" in result.stderr) == (2, True)
+
+
+@pytest.fixture
+def real_container_without_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, docs: Path
+) -> Path:
+    # Real container and Settings(), but no key, no .env (fresh cwd) and no model download.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("RAG_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(container, "TextEmbedding", FakeTextEmbedding)
+    return docs
+
+
+def test_cli_ingest_and_list_work_without_api_key(real_container_without_key: Path) -> None:
+    ingest = run("ingest", "--collection", "hr", str(real_container_without_key))
+    listed = run("list")
+    assert (ingest.exit_code, listed.exit_code, listed.stdout.split()) == (0, 0, ["hr"])
+
+
+def test_cli_ask_without_api_key_exits_1_with_fix_message(real_container_without_key: Path) -> None:
+    run("ingest", "--collection", "hr", str(real_container_without_key))
+    result = run("ask", "--collection", "hr", QUESTION)
+    assert result.exit_code == 1
+    assert "ANTHROPIC_API_KEY is not set. Add it to .env in the repository root." in result.stderr

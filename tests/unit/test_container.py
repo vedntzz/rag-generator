@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from rag_generator.config import Settings
+from rag_generator.errors import MissingApiKeyError
 from rag_generator.llm.anthropic_llm import AnthropicLLM
 from rag_generator.pipeline import container
 from rag_generator.pipeline.container import (
@@ -125,3 +126,33 @@ def test_container_constructs_text_embedding_once_on_first_embed(
     service.ingest("hr", [write_leave_doc(tmp_path)])
     service.ask("hr", QUESTION)
     assert counting_text_embedding.instances == 1
+
+
+@pytest.mark.parametrize("key", [None, ""])
+def test_default_llm_raises_missing_api_key_without_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, key: str | None
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    if key is not None:
+        monkeypatch.setenv("ANTHROPIC_API_KEY", key)
+    with pytest.raises(MissingApiKeyError):
+        build_default_llm(make_settings(tmp_path))
+
+
+def test_container_without_key_still_lists_and_ingests(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    service = build_rag_service(make_settings(tmp_path), FakeEmbedder())
+    service.ingest("hr", [write_leave_doc(tmp_path)])
+    assert service.list_collections() == ["hr"]
+
+
+def test_container_without_key_raises_missing_api_key_when_llm_needed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    service = build_rag_service(make_settings(tmp_path), FakeEmbedder())
+    service.ingest("hr", [write_leave_doc(tmp_path)])
+    with pytest.raises(MissingApiKeyError):
+        service.ask("hr", QUESTION)
