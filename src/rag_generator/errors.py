@@ -21,3 +21,8 @@ class InvalidCollectionNameError(RagError):
     def __init__(self, collection: str) -> None:
         super().__init__(f"Invalid collection name: '{collection}'")
         self.collection = collection
+
+
+class LlmError(RagError):
+    def __init__(self, detail: str) -> None:
+        super().__init__(f"LLM request failed: {detail}")
